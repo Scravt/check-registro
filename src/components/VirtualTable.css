@@ -1,0 +1,77 @@
+.virtual-table-container {
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-header {
+    display: flex;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--card-border);
+    font-weight: 700;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.table-row {
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    transition: background 0.2s;
+}
+
+.table-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.table-row.even {
+    background: rgba(255, 255, 255, 0.01);
+}
+
+/* Columns */
+.header-index,
+.row-index {
+    width: 60px;
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.header-cuit,
+.row-cuit {
+    width: 140px;
+    flex-shrink: 0;
+    font-family: monospace;
+    color: var(--accent-primary);
+}
+
+.header-content,
+.row-content {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.table-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--card-border);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.1);
+    text-align: right;
+}
+
+.empty-table-state {
+    padding: 3rem;
+    text-align: center;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0.5rem;
+}
