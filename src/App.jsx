@@ -1,124 +1,28 @@
-
-import React, { useState, useMemo } from 'react';
-import { FileUp, Database, Download, FileSpreadsheet, File as FileIcon } from 'lucide-react';
-import { jsPDF } from "jspdf";
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import React, { useState } from 'react';
+import { FileUp, Database, FileSpreadsheet, File as FileIcon } from 'lucide-react';
 
 import FileUploader from './components/FileUploader';
 import VirtualTable from './components/VirtualTable';
-import { parseArcaFile, parseEntreRiosFile, parseLaboralesFile } from './utils/parser';
-import { getCrossReference } from './utils/analyzer';
+import { useFileProcessor } from './hooks/useFileProcessor';
+import { exportPDF, exportExcel } from './utils/exporter';
 
 import './App.css';
 
 function App() {
   const [step, setStep] = useState('intro'); // intro, upload, results
-  const [files, setFiles] = useState({
-    arca: null,
-    entreRios: null,
-    laborales: null
-  });
-  const [data, setData] = useState({
-    arca: [],
-    entreRios: [],
-    laborales: []
-  });
   const [activeTab, setActiveTab] = useState('results'); // 'loaded', 'results'
   const [viewingFile, setViewingFile] = useState('arca'); // for 'loaded' tab
 
-  const handleFileSelect = (key, file) => {
-    setFiles(prev => ({ ...prev, [key]: file }));
-  };
+  const {
+    files,
+    data,
+    crossReferenceData,
+    handleFileSelect,
+    processFiles
+  } = useFileProcessor();
 
-  const processFiles = async () => {
-    if (!files.arca || !files.entreRios || !files.laborales) {
-      alert("Por favor, carga los 3 archivos antes de continuar.");
-      return;
-    }
-
-    const readFile = (file) => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
-    };
-
-    try {
-      const [arcaText, entreRiosText, laboralesText] = await Promise.all([
-        readFile(files.arca),
-        readFile(files.entreRios),
-        readFile(files.laborales)
-      ]);
-
-      console.log("Files read successfully. Starting parsing...");
-
-      const arcaData = parseArcaFile(arcaText);
-      const entreRiosData = parseEntreRiosFile(entreRiosText);
-      const laboralesData = parseLaboralesFile(laboralesText);
-
-      console.log("Parsed Data:", {
-        arca: arcaData?.length,
-        entreRios: entreRiosData?.length,
-        laborales: laboralesData?.length,
-        arcaSample: arcaData?.[0],
-      });
-
-      setData({
-        arca: arcaData,
-        entreRios: entreRiosData,
-        laborales: laboralesData
-      });
-
-      setStep('results');
-    } catch (error) {
-      console.error("Error processing files", error); // Log full object
-      console.log("Error details:", error.message, error.stack);
-      alert(`Hubo un error leyendo los archivos: ${error.message}`);
-    }
-  };
-
-  const crossReferenceData = useMemo(() => {
-    if (step !== 'results') return [];
-    return getCrossReference(data.arca, data.entreRios);
-  }, [data, step]);
-
-  const exportPDF = () => {
-    const doc = new jsPDF();
-
-    doc.setFontSize(18);
-    doc.text("Reporte de Entrecruzamiento", 14, 22);
-
-    doc.setFontSize(11);
-    doc.text(`Total encontrados: ${crossReferenceData.length}`, 14, 30);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 36);
-
-    const tableData = crossReferenceData.map((item, index) => [
-      index + 1,
-      item.cuit,
-      item.display ? item.display.substring(0, 50) : ''
-    ]);
-
-    autoTable(doc, {
-      head: [['#', 'CUIT', 'Detalle']],
-      body: tableData,
-      startY: 44,
-    });
-
-    doc.save("reporte-entrecruzamiento.pdf");
-  };
-
-  const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(crossReferenceData.map(item => ({
-      CUIT: item.cuit,
-      Contenido: item.display
-    })));
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Resultados");
-    XLSX.writeFile(wb, "resultado-entrecruzamiento.xlsx");
+  const handleProcess = () => {
+    processFiles(() => setStep('results'));
   };
 
   /* RENDER BLOCKS */
@@ -174,7 +78,7 @@ function App() {
         </button>
         <button
           className="btn btn-primary"
-          onClick={processFiles}
+          onClick={handleProcess}
           disabled={!files.arca || !files.entreRios || !files.laborales}
         >
           Procesar y Cruzar Datos <Database size={20} />
@@ -190,10 +94,10 @@ function App() {
         <div className="export-actions">
           <button className="btn btn-secondary" onClick={() => setStep('upload')}>Nueva Carga</button>
           <div className="separator"></div>
-          <button className="btn btn-primary" onClick={exportExcel}>
+          <button className="btn btn-primary" onClick={() => exportExcel(crossReferenceData)}>
             <FileSpreadsheet size={18} /> Excel
           </button>
-          <button className="btn btn-primary" onClick={exportPDF}>
+          <button className="btn btn-primary" onClick={() => exportPDF(crossReferenceData)}>
             <FileIcon size={18} /> PDF
           </button>
         </div>
