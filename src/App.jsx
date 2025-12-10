@@ -53,16 +53,30 @@ function App() {
         readFile(files.laborales)
       ]);
 
+      console.log("Files read successfully. Starting parsing...");
+
+      const arcaData = parseArcaFile(arcaText);
+      const entreRiosData = parseEntreRiosFile(entreRiosText);
+      const laboralesData = parseLaboralesFile(laboralesText);
+
+      console.log("Parsed Data:", {
+        arca: arcaData?.length,
+        entreRios: entreRiosData?.length,
+        laborales: laboralesData?.length,
+        arcaSample: arcaData?.[0],
+      });
+
       setData({
-        arca: parseArcaFile(arcaText),
-        entreRios: parseEntreRiosFile(entreRiosText),
-        laborales: parseLaboralesFile(laboralesText)
+        arca: arcaData,
+        entreRios: entreRiosData,
+        laborales: laboralesData
       });
 
       setStep('results');
     } catch (error) {
-      console.error("Error processing files", error);
-      alert("Hubo un error leyendo los archivos.");
+      console.error("Error processing files", error); // Log full object
+      console.log("Error details:", error.message, error.stack);
+      alert(`Hubo un error leyendo los archivos: ${error.message}`);
     }
   };
 
