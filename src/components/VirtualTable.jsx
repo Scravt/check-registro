@@ -3,6 +3,8 @@ import React from 'react';
 import './VirtualTable.css';
 
 const VirtualTable = ({ data, height = 500 }) => {
+    const [filter, setFilter] = React.useState('');
+
     if (!data || data.length === 0) {
         return (
             <div className="empty-table-state">
@@ -11,14 +13,40 @@ const VirtualTable = ({ data, height = 500 }) => {
         );
     }
 
+    const filteredData = React.useMemo(() => {
+        if (!filter) return data;
+        const lowerFilter = filter.toLowerCase();
+        return data.filter(item =>
+            (item.cuit && item.cuit.includes(lowerFilter)) ||
+            (item.display && item.display.toLowerCase().includes(lowerFilter))
+        );
+    }, [data, filter]);
+
     // Safety limit: only render first 2000 items to avoid freezing browser without virtualization.
     // The user can export full data if needed.
     const MAX_ITEMS = 2000;
-    const displayData = data.slice(0, MAX_ITEMS);
-    const isTruncated = data.length > MAX_ITEMS;
+    const displayData = filteredData.slice(0, MAX_ITEMS);
+    const isTruncated = filteredData.length > MAX_ITEMS;
 
     return (
         <div className="virtual-table-container glass-panel" style={{ height: height, display: 'flex', flexDirection: 'column' }}>
+            <div className="table-controls" style={{ padding: '0.75rem', borderBottom: '1px solid var(--card-border)' }}>
+                <input
+                    type="text"
+                    placeholder="Filtrar por CUIT..."
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    style={{
+                        width: '100%',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.5rem',
+                        border: '1px solid var(--card-border)',
+                        background: 'rgba(0,0,0,0.2)',
+                        color: 'var(--text-main)',
+                        outline: 'none'
+                    }}
+                />
+            </div>
             <div className="table-header">
                 <span className="header-index">#</span>
                 <span className="header-cuit">CUIT</span>
@@ -39,9 +67,14 @@ const VirtualTable = ({ data, height = 500 }) => {
                         ⚠ Mostrando los primeros {MAX_ITEMS} registros. Exporte a Excel para ver todo.
                     </div>
                 )}
+                {displayData.length === 0 && (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                        No se encontraron resultados para "{filter}"
+                    </div>
+                )}
             </div>
             <div className="table-footer">
-                Total: {data.length.toLocaleString()} registros
+                Mostrando: {filteredData.length.toLocaleString()} / Total: {data.length.toLocaleString()}
             </div>
         </div>
     );
