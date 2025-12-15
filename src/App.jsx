@@ -30,11 +30,11 @@ function App() {
   const renderIntro = () => (
     <div className="intro-screen animate-fade-in">
       <h1>Sistema de Detección de Empleadores</h1>
-      <p className="subtitle">Herramienta de control y auditoría cruzada</p>
+      <p className="subtitle">Herramienta de control y auditoría cruzada - ARCA vs SIDREL</p>
 
       <div className="info-card glass-panel">
         <p>
-          Este sistema permite identificar empleadores registrados en <strong>ARCA</strong> que no figuran en el padrón de la <strong>Secretaría de Trabajo de Entre Ríos</strong>.
+          Este sistema permite identificar empleadores registrados en <strong>ARCA</strong> que no figuran en el padrón de <strong>SIDREL</strong>.
         </p>
         <p style={{ marginTop: '1rem' }}>
           El proceso es 100% local y seguro. Sus datos no salen de este navegador.
@@ -51,22 +51,27 @@ function App() {
     <div className="upload-screen animate-fade-in">
       <header className="header-compact">
         <h2>Carga de Datos</h2>
-        <p>Introduce los 3 archivos requeridos para el análisis.</p>
+        <p>Introduce los 4 archivos requeridos para el análisis.</p>
       </header>
 
-      <div className="upload-grid">
+      <div className="upload-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
         <FileUploader
           title="1. Archivo ARCA (Domicilio Explotación)"
           fileStatus={files.arca}
           onFileSelect={(f) => handleFileSelect('arca', f)}
         />
         <FileUploader
-          title="2. Padrón Entre Ríos"
+          title="2. Padrón SIDREL"
+          fileStatus={files.sidrel}
+          onFileSelect={(f) => handleFileSelect('sidrel', f)}
+        />
+        <FileUploader
+          title="3. Padrón Entre Ríos (SAL702)"
           fileStatus={files.entreRios}
           onFileSelect={(f) => handleFileSelect('entreRios', f)}
         />
         <FileUploader
-          title="3. Relaciones Laborales"
+          title="4. Relaciones Laborales"
           fileStatus={files.laborales}
           onFileSelect={(f) => handleFileSelect('laborales', f)}
         />
@@ -79,7 +84,7 @@ function App() {
         <button
           className="btn btn-primary"
           onClick={handleProcess}
-          disabled={!files.arca || !files.entreRios || !files.laborales}
+          disabled={!files.arca || !files.entreRios || !files.laborales || !files.sidrel}
         >
           Procesar y Cruzar Datos <Database size={20} />
         </button>
@@ -108,13 +113,19 @@ function App() {
           className={`tab ${activeTab === 'results' ? 'active' : ''}`}
           onClick={() => setActiveTab('results')}
         >
-          Entrecruzamiento (ARCA vs E.Rios)
+          Entrecruzamiento (ARCA vs SIDREL)
         </button>
         <button
           className={`tab ${activeTab === 'loaded' ? 'active' : ''}`}
-          onClick={() => setActiveTab('loaded')}
+          onClick={() => {
+            setActiveTab('loaded');
+            // Default to entreRios (SAL702) if restricted view
+            if (viewingFile !== 'entreRios' && viewingFile !== 'laborales') {
+              setViewingFile('entreRios');
+            }
+          }}
         >
-          Datos Cargados
+          Datos Cargados (Referencias)
         </button>
       </div>
 
@@ -127,12 +138,12 @@ function App() {
             </div>
             <div className="stat-divider"></div>
             <div className="stat-item">
-              <span className="label">En Entre Ríos</span>
-              <span className="value">{data.entreRios.length.toLocaleString()}</span>
+              <span className="label">En SIDREL</span>
+              <span className="value">{data.sidrel.length.toLocaleString()}</span>
             </div>
             <div className="stat-divider"></div>
             <div className="stat-item highlight">
-              <span className="label">No Registrados en Prov.</span>
+              <span className="label">No Registrados en SIDREL</span>
               <span className="value error">{crossReferenceData.length.toLocaleString()}</span>
             </div>
           </div>
@@ -144,8 +155,8 @@ function App() {
       ) : (
         <div className="loaded-view">
           <div className="sub-tabs">
-            <button className={viewingFile === 'arca' ? 'active' : ''} onClick={() => setViewingFile('arca')}>ARCA</button>
-            <button className={viewingFile === 'entreRios' ? 'active' : ''} onClick={() => setViewingFile('entreRios')}>Entre Ríos</button>
+            {/* User requested ONLY SAL702 and Laborales here */}
+            <button className={viewingFile === 'entreRios' ? 'active' : ''} onClick={() => setViewingFile('entreRios')}>SAL702 (Entre Ríos)</button>
             <button className={viewingFile === 'laborales' ? 'active' : ''} onClick={() => setViewingFile('laborales')}>Rel. Laborales</button>
           </div>
           <VirtualTable data={data[viewingFile]} height={550} />

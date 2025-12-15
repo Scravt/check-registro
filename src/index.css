@@ -1,16 +1,16 @@
 :root {
-  --bg-color: #0f172a;
-  /* Slate 900 */
-  --text-main: #f8fafc;
+  --bg-color: #f8fafc;
   /* Slate 50 */
-  --text-secondary: #94a3b8;
-  /* Slate 400 */
-  --accent-primary: #3b82f6;
-  /* Blue 500 */
-  --accent-glow: rgba(59, 130, 246, 0.5);
-  --card-bg: rgba(30, 41, 59, 0.7);
-  /* Slate 800 with opacity */
-  --card-border: rgba(255, 255, 255, 0.1);
+  --text-main: #0f172a;
+  /* Slate 900 */
+  --text-secondary: #475569;
+  /* Slate 600 */
+  --accent-primary: #0d9488;
+  /* Teal 600 */
+  --accent-glow: rgba(13, 148, 136, 0.5);
+  --card-bg: rgba(255, 255, 255, 0.8);
+  /* White with opacity */
+  --card-border: rgba(15, 23, 42, 0.1);
   --success: #10b981;
   --error: #ef4444;
 
@@ -31,9 +31,9 @@ body {
   color: var(--text-main);
   line-height: 1.5;
   background-image:
-    radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
-    radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
-    radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+    radial-gradient(at 0% 0%, hsla(175, 40%, 96%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(210, 40%, 96%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(339, 49%, 98%, 1) 0, transparent 50%);
   min-height: 100vh;
 }
 
@@ -47,10 +47,8 @@ h3 {
 
 h1 {
   font-size: 2.5rem;
-  background: linear-gradient(to right, #fff, #94a3b8);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-main);
+  /* Solid color for better contrast in light mode */
 }
 
 /* Glassmorphism Card */
@@ -90,12 +88,12 @@ h1 {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.05);
   color: var(--text-main);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.1);
 }
 
 /* Animations */
@@ -131,7 +129,7 @@ h1 {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(15, 23, 42, 0.3);
 }
 
 /* Tabs */
