@@ -155,7 +155,8 @@ function App() {
       ) : (
         <div className="loaded-view">
           <div className="sub-tabs">
-            {/* User requested ONLY SAL702 and Laborales here */}
+            <button className={viewingFile === 'arca' ? 'active' : ''} onClick={() => setViewingFile('arca')}>ARCA</button>
+            <button className={viewingFile === 'sidrel' ? 'active' : ''} onClick={() => setViewingFile('sidrel')}>SIDREL</button>
             <button className={viewingFile === 'entreRios' ? 'active' : ''} onClick={() => setViewingFile('entreRios')}>SAL702 (Entre Ríos)</button>
             <button className={viewingFile === 'laborales' ? 'active' : ''} onClick={() => setViewingFile('laborales')}>Rel. Laborales</button>
           </div>
