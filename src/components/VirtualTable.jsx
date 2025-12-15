@@ -1,12 +1,15 @@
 
-import React from 'react';
 import './VirtualTable.css';
 
-const VirtualTable = ({ data, height = 500 }) => {
-    const [filter, setFilter] = React.useState('');
-    const [localityFilter, setLocalityFilter] = React.useState('');
-
-    if (!data || data.length === 0) {
+const VirtualTable = ({
+    data,
+    height = 500,
+    filter = '',
+    setFilter = () => { },
+    localityFilter = '',
+    setLocalityFilter = () => { }
+}) => {
+    if (!data) {
         return (
             <div className="empty-table-state">
                 <p>No hay datos para mostrar</p>
@@ -14,27 +17,8 @@ const VirtualTable = ({ data, height = 500 }) => {
         );
     }
 
-    const filteredData = React.useMemo(() => {
-        let res = data;
-
-        if (filter) {
-            const lowerFilter = filter.toLowerCase();
-            res = res.filter(item =>
-                (item.cuit && item.cuit.includes(lowerFilter)) ||
-                (item.calle && item.calle.toLowerCase().includes(lowerFilter)) ||
-                (item.display && item.display.toLowerCase().includes(lowerFilter))
-            );
-        }
-
-        if (localityFilter) {
-            const lowerLoc = localityFilter.toLowerCase();
-            res = res.filter(item =>
-                item.localidad && item.localidad.toLowerCase().includes(lowerLoc)
-            );
-        }
-
-        return res;
-    }, [data, filter, localityFilter]);
+    // Data is assumed to be passed already filtered from parent
+    const filteredData = data;
 
     // Safety limit: only render first 2000 items to avoid freezing browser without virtualization.
     // The user can export full data if needed.
@@ -57,7 +41,8 @@ const VirtualTable = ({ data, height = 500 }) => {
                         border: '1px solid var(--card-border)',
                         background: 'rgba(0,0,0,0.2)',
                         color: 'var(--text-main)',
-                        outline: 'none'
+                        outline: 'none',
+                        textTransform: 'uppercase'
                     }}
                 />
                 <input
@@ -72,7 +57,8 @@ const VirtualTable = ({ data, height = 500 }) => {
                         border: '1px solid var(--card-border)',
                         background: 'rgba(0,0,0,0.2)',
                         color: 'var(--text-main)',
-                        outline: 'none'
+                        outline: 'none',
+                        textTransform: 'uppercase'
                     }}
                 />
             </div>
@@ -109,15 +95,16 @@ const VirtualTable = ({ data, height = 500 }) => {
                 )}
                 {displayData.length === 0 && (
                     <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                        No se encontraron resultados para "{filter}"
+                        No se encontraron resultados.
                     </div>
                 )}
             </div>
             <div className="table-footer">
-                Mostrando: {filteredData.length.toLocaleString()} / Total: {data.length.toLocaleString()}
+                Mostrando: {filteredData.length.toLocaleString()}
             </div>
         </div>
     );
 };
 
 export default VirtualTable;
+

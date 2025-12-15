@@ -110,46 +110,70 @@
   background: var(--card-border);
 }
 
+/* Stats Bar Specifics */
 .stat-item .label {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
 }
 
 .stat-item .value {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 800;
   color: var(--text-main);
+  line-height: 1;
 }
 
-.stat-item .value.error {
+/* Differentiate Stats */
+.stat-item:first-child .value {
+  color: var(--accent-primary);
+  /* Emerald 600 for Arca */
+}
+
+.stat-item:nth-child(3) .value {
+  color: #0d9488;
+  /* Teal 600 for Sidrel to differentiate */
+}
+
+.stat-item.highlight .value.error {
   color: var(--error);
-  text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+  text-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
 .sub-tabs {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  background: var(--card-bg);
+  padding: 0.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--card-border);
+  width: fit-content;
 }
 
 .sub-tabs button {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent;
+  background: transparent;
+  border: none;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .sub-tabs button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(6, 78, 59, 0.05);
+  color: var(--text-main);
 }
 
 .sub-tabs button.active {
   background: var(--accent-primary);
   color: white;
+  box-shadow: 0 4px 12px var(--accent-glow);
 }

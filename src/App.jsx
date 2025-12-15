@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FileUp, Database, FileSpreadsheet, File as FileIcon } from 'lucide-react';
 
 import FileUploader from './components/FileUploader';
@@ -9,9 +9,14 @@ import { exportPDF, exportExcel } from './utils/exporter';
 import './App.css';
 
 function App() {
-  const [step, setStep] = useState('intro'); // intro, upload, results
-  const [activeTab, setActiveTab] = useState('results'); // 'loaded', 'results'
-  const [viewingFile, setViewingFile] = useState('arca'); // for 'loaded' tab
+  /* STATE */
+  const [step, setStep] = useState('intro');
+  const [activeTab, setActiveTab] = useState('results');
+  const [viewingFile, setViewingFile] = useState('entreRios');
+
+  // Filter State (Lifted from VirtualTable)
+  const [filter, setFilter] = useState('');
+  const [localityFilter, setLocalityFilter] = useState('');
 
   const {
     files,
@@ -21,8 +26,40 @@ function App() {
     processFiles
   } = useFileProcessor();
 
-  const handleProcess = () => {
-    processFiles(() => setStep('results'));
+  // Reset filters when context changes
+  useEffect(() => {
+    setFilter('');
+    setLocalityFilter('');
+  }, [activeTab, viewingFile]);
+
+  // Compute Filtered Data
+  const currentData = activeTab === 'results' ? crossReferenceData : (data[viewingFile] || []);
+
+  const filteredData = useMemo(() => {
+    let res = currentData;
+    if (!res) return [];
+
+    if (filter) {
+      const lowerFilter = filter.toLowerCase();
+      res = res.filter(item =>
+        (item.cuit && item.cuit.includes(lowerFilter)) ||
+        (item.calle && item.calle.toLowerCase().includes(lowerFilter)) ||
+        (item.display && item.display.toLowerCase().includes(lowerFilter)) // display usually holds name/razon social
+      );
+    }
+
+    if (localityFilter) {
+      const lowerLoc = localityFilter.toLowerCase();
+      res = res.filter(item =>
+        item.localidad && item.localidad.toLowerCase().includes(lowerLoc)
+      );
+    }
+    return res;
+  }, [currentData, filter, localityFilter]);
+
+  /* HANDLERS */
+  const handleProcess = async () => {
+    await processFiles(() => setStep('results'));
   };
 
   /* RENDER BLOCKS */
@@ -99,10 +136,11 @@ function App() {
         <div className="export-actions">
           <button className="btn btn-secondary" onClick={() => setStep('upload')}>Nueva Carga</button>
           <div className="separator"></div>
-          <button className="btn btn-primary" onClick={() => exportExcel(crossReferenceData)}>
+          {/* Export filteredData instead of crossReferenceData */}
+          <button className="btn btn-primary" onClick={() => exportExcel(filteredData)}>
             <FileSpreadsheet size={18} /> Excel
           </button>
-          <button className="btn btn-primary" onClick={() => exportPDF(crossReferenceData)}>
+          <button className="btn btn-primary" onClick={() => exportPDF(filteredData)}>
             <FileIcon size={18} /> PDF
           </button>
         </div>
@@ -149,7 +187,14 @@ function App() {
           </div>
 
           <div style={{ marginTop: '1.5rem' }}>
-            <VirtualTable data={crossReferenceData} height={600} />
+            <VirtualTable
+              data={filteredData}
+              height={600}
+              filter={filter}
+              setFilter={setFilter}
+              localityFilter={localityFilter}
+              setLocalityFilter={setLocalityFilter}
+            />
           </div>
         </div>
       ) : (
@@ -160,7 +205,14 @@ function App() {
             <button className={viewingFile === 'entreRios' ? 'active' : ''} onClick={() => setViewingFile('entreRios')}>SAL702 (Entre Ríos)</button>
             <button className={viewingFile === 'laborales' ? 'active' : ''} onClick={() => setViewingFile('laborales')}>Rel. Laborales</button>
           </div>
-          <VirtualTable data={data[viewingFile]} height={550} />
+          <VirtualTable
+            data={filteredData}
+            height={550}
+            filter={filter}
+            setFilter={setFilter}
+            localityFilter={localityFilter}
+            setLocalityFilter={setLocalityFilter}
+          />
         </div>
       )}
     </div>
