@@ -8,11 +8,30 @@ import { exportPDF, exportExcel } from './utils/exporter';
 
 import './App.css';
 
+// Column Definitions
+const DEFAULT_COLUMNS = [
+  { key: 'cuit', label: 'CUIT', className: 'cuit' },
+  { key: 'cp', label: 'CP', className: 'cp' },
+  { key: 'calle', label: 'Calle', className: 'calle' },
+  { key: 'numero', label: 'N°', className: 'nro' },
+  { key: 'localidad', label: 'Localidad', className: 'localidad' },
+  { key: 'raw', label: 'Info Original', className: 'content', render: (item) => item.raw ? item.raw.substring(0, 30) + '...' : (item.display || '') }
+];
+
+const LSD_COLUMNS = [
+  { key: 'cuit', label: 'CUIT', className: 'cuit' },
+  { key: 'display', label: 'Razón Social', className: 'razon' }, // display map to Razón Social for LSD
+  { key: 'calle', label: 'Calle', className: 'calle' },
+  { key: 'numero', label: 'N°', className: 'nro' },
+  { key: 'cp', label: 'CP', className: 'cp' },
+  { key: 'localidad', label: 'Localidad', className: 'localidad' }
+];
+
 function App() {
   /* STATE */
   const [step, setStep] = useState('intro');
-  const [activeTab, setActiveTab] = useState('results');
-  const [viewingFile, setViewingFile] = useState('entreRios');
+  const [activeTab, setActiveTab] = useState('lsdResults');
+  const [viewingFile, setViewingFile] = useState('arca');
 
   // Filter State (Lifted from VirtualTable)
   const [filter, setFilter] = useState('');
@@ -22,6 +41,7 @@ function App() {
     files,
     data,
     crossReferenceData,
+    lsdCrossReference,
     handleFileSelect,
     processFiles
   } = useFileProcessor();
@@ -33,7 +53,14 @@ function App() {
   }, [activeTab, viewingFile]);
 
   // Compute Filtered Data
-  const currentData = activeTab === 'results' ? crossReferenceData : (data[viewingFile] || []);
+  const currentData = useMemo(() => {
+    switch (activeTab) {
+      case 'results': return crossReferenceData;
+      case 'lsdResults': return lsdCrossReference;
+      case 'loaded': return data[viewingFile] || [];
+      default: return [];
+    }
+  }, [activeTab, crossReferenceData, lsdCrossReference, data, viewingFile]);
 
   const filteredData = useMemo(() => {
     let res = currentData;
@@ -88,10 +115,10 @@ function App() {
     <div className="upload-screen animate-fade-in">
       <header className="header-compact">
         <h2>Carga de Datos</h2>
-        <p>Introduce los 4 archivos requeridos para el análisis.</p>
+        <p>Introduce los 3 archivos requeridos para el análisis.</p>
       </header>
 
-      <div className="upload-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+      <div className="upload-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <FileUploader
           title="1. Archivo ARCA (Domicilio Explotación)"
           fileStatus={files.arca}
@@ -103,14 +130,9 @@ function App() {
           onFileSelect={(f) => handleFileSelect('sidrel', f)}
         />
         <FileUploader
-          title="3. Padrón Entre Ríos (SAL702)"
-          fileStatus={files.entreRios}
-          onFileSelect={(f) => handleFileSelect('entreRios', f)}
-        />
-        <FileUploader
-          title="4. Relaciones Laborales"
-          fileStatus={files.laborales}
-          onFileSelect={(f) => handleFileSelect('laborales', f)}
+          title="3. LSD Definitivos"
+          fileStatus={files.lsdDefinitivos}
+          onFileSelect={(f) => handleFileSelect('lsdDefinitivos', f)}
         />
       </div>
 
@@ -121,7 +143,7 @@ function App() {
         <button
           className="btn btn-primary"
           onClick={handleProcess}
-          disabled={!files.arca || !files.entreRios || !files.laborales || !files.sidrel}
+          disabled={!files.arca || !files.lsdDefinitivos || !files.sidrel}
         >
           Procesar y Cruzar Datos <Database size={20} />
         </button>
@@ -154,12 +176,19 @@ function App() {
           Entrecruzamiento (ARCA vs SIDREL)
         </button>
         <button
+          className={`tab ${activeTab === 'lsdResults' ? 'active' : ''}`}
+          onClick={() => setActiveTab('lsdResults')}
+          style={{ order: -1 }} // Visual order trick or just rearrange DOM. Better rearrange DOM.
+        >
+          ARCA Sueldos vs SIDREL
+        </button>
+        <button
           className={`tab ${activeTab === 'loaded' ? 'active' : ''}`}
           onClick={() => {
             setActiveTab('loaded');
-            // Default to entreRios (SAL702) if restricted view
-            if (viewingFile !== 'entreRios' && viewingFile !== 'laborales') {
-              setViewingFile('entreRios');
+            // Default to arca if restricted view
+            if (viewingFile !== 'lsdDefinitivos') {
+              setViewingFile('arca');
             }
           }}
         >
@@ -194,6 +223,38 @@ function App() {
               setFilter={setFilter}
               localityFilter={localityFilter}
               setLocalityFilter={setLocalityFilter}
+              columns={DEFAULT_COLUMNS}
+            />
+          </div>
+        </div>
+      ) : activeTab === 'lsdResults' ? (
+        <div className="results-view">
+          <div className="stats-bar glass-panel">
+            <div className="stat-item">
+              <span className="label">En ARCA Sueldos (LSD - Empleadores)</span>
+              <span className="value">{data.lsdDefinitivos.filter(i => i.tipo === 'EMPLEADOR').length.toLocaleString()}</span>
+            </div>
+            <div className="stat-divider"></div>
+            <div className="stat-item">
+              <span className="label">En SIDREL</span>
+              <span className="value">{data.sidrel.length.toLocaleString()}</span>
+            </div>
+            <div className="stat-divider"></div>
+            <div className="stat-item highlight">
+              <span className="label">No Registrados en SIDREL</span>
+              <span className="value error">{lsdCrossReference.length.toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '1.5rem' }}>
+            <VirtualTable
+              data={filteredData}
+              height={600}
+              filter={filter}
+              setFilter={setFilter}
+              localityFilter={localityFilter}
+              setLocalityFilter={setLocalityFilter}
+              columns={LSD_COLUMNS}
             />
           </div>
         </div>
@@ -202,8 +263,7 @@ function App() {
           <div className="sub-tabs">
             <button className={viewingFile === 'arca' ? 'active' : ''} onClick={() => setViewingFile('arca')}>ARCA</button>
             <button className={viewingFile === 'sidrel' ? 'active' : ''} onClick={() => setViewingFile('sidrel')}>SIDREL</button>
-            <button className={viewingFile === 'entreRios' ? 'active' : ''} onClick={() => setViewingFile('entreRios')}>SAL702 (Entre Ríos)</button>
-            <button className={viewingFile === 'laborales' ? 'active' : ''} onClick={() => setViewingFile('laborales')}>Rel. Laborales</button>
+            <button className={viewingFile === 'lsdDefinitivos' ? 'active' : ''} onClick={() => setViewingFile('lsdDefinitivos')}>LSD Definitivos</button>
           </div>
           <VirtualTable
             data={filteredData}
@@ -212,6 +272,7 @@ function App() {
             setFilter={setFilter}
             localityFilter={localityFilter}
             setLocalityFilter={setLocalityFilter}
+            columns={DEFAULT_COLUMNS}
           />
         </div>
       )}

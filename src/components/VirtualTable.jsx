@@ -7,7 +7,15 @@ const VirtualTable = ({
     filter = '',
     setFilter = () => { },
     localityFilter = '',
-    setLocalityFilter = () => { }
+    setLocalityFilter = () => { },
+    columns = [
+        { key: 'cuit', label: 'CUIT', className: 'cuit' },
+        { key: 'cp', label: 'CP', className: 'cp' },
+        { key: 'calle', label: 'Calle', className: 'calle' },
+        { key: 'numero', label: 'N°', className: 'nro' },
+        { key: 'localidad', label: 'Localidad', className: 'localidad' },
+        { key: 'raw', label: 'Info Original', className: 'content', render: (item) => item.raw ? item.raw.substring(0, 30) + '...' : (item.display || '') }
+    ]
 }) => {
     if (!data) {
         return (
@@ -64,28 +72,19 @@ const VirtualTable = ({
             </div>
             <div className="table-header">
                 <span className="header-index">#</span>
-                <span className="header-cuit">CUIT</span>
-                <span className="header-cp">CP</span>
-                <span className="header-calle">Calle</span>
-                <span className="header-nro">N°</span>
-                <span className="header-localidad">Localidad</span>
-                <span className="header-content">Info Original</span>
+                {columns.map((col, idx) => (
+                    <span key={idx} className={`header-${col.className}`}>{col.label}</span>
+                ))}
             </div>
             <div className="table-body" style={{ overflowY: 'auto', flex: 1 }}>
                 {displayData.map((item, index) => (
                     <div key={index} className={`table-row ${index % 2 === 0 ? 'even' : 'odd'}`} style={{ height: '45px' }}>
                         <span className="row-index">{index + 1}</span>
-                        <span className="row-cuit">{item.cuit || ''}</span>
-                        <span className="row-cp">{item.cp || '-'}</span>
-                        <span className="row-calle" title={item.calle || ''}>{item.calle || ''}</span>
-                        <span className="row-nro">{item.numero || ''}</span>
-                        <span className="row-localidad" title={item.localidad || ''}>
-                            {item.localidad || '-'}
-                        </span>
-                        <span className="row-content" title={item.raw || ''}>
-                            {/* Shorten raw content or show display if not parsed efficiently */}
-                            {item.raw ? item.raw.substring(0, 30) + '...' : (item.display || '')}
-                        </span>
+                        {columns.map((col, idx) => (
+                            <span key={idx} className={`row-${col.className}`} title={item[col.key] || ''}>
+                                {col.render ? col.render(item) : (item[col.key] || (col.key === 'cp' ? '-' : ''))}
+                            </span>
+                        ))}
                     </div>
                 ))}
                 {isTruncated && (

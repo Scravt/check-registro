@@ -175,5 +175,140 @@ export const parseSidrelFile = (content) => {
     return parsedData;
 };
 
-export const parseEntreRiosFile = parseFileContent;
-export const parseLaboralesFile = parseFileContent;
+/**
+ * Parser para archivos de Libro de Sueldos Digital (LSD/HFLSD)
+ * Formato de ancho fijo (Fixed Width).
+ */
+export const parseLSDLine = (line) => {
+    if (!line || line.trim().length === 0) return null;
+
+    // El tipo de registro son los primeros 2 caracteres
+    const type = line.substring(0, 2);
+
+    switch (type) {
+        // --- TIPO 01: CABECERA EMPLEADOR (Datos de la Empresa) ---
+        case '01': {
+            // Regex explicada:
+            // ^01\d*?           -> Empieza con 01 seguido de números basura (non-greedy)
+            // (\d{11})          -> CAPTURA 1: CUIT (Los últimos 11 dígitos antes del nombre)
+            // ([A-ZÑ\s\.,&]+?)  -> CAPTURA 2: Razón Social (Letras, espacios, puntos, comas)
+            // \s+               -> Espacios obligatorios
+            // 20\d{4}M          -> Ancla: Fecha del periodo (ej: 202511M)
+            // .*?               -> Basura intermedia (IDs de sistema)
+            // ([A-Z0-9\s\.]+?)  -> CAPTURA 3: Calle (ej: CETTOUR o DR. CETTOUR)
+            // \s+               -> Espacios antes del número
+            // (\d{1,6})         -> CAPTURA 4: Número/Altura (ej: 2006)
+            // \s+               -> Espacios
+            // ([A-Z\s]+?)       -> CAPTURA 5: Localidad (ej: SAN JOSE)
+            // \s+               -> Espacios
+            // (\d{4})           -> CAPTURA 6: Código Postal (ej: 3283)
+
+            const regex01 = /^01\d*?(\d{11})([A-ZÑ\s\.,&]+?)\s+20\d{4}M.*?([A-Z0-9\s\.]+?)\s+(\d{1,6})\s+([A-Z\s]+?)\s+(\d{4})/;
+
+            const match = line.match(regex01);
+
+            if (!match) {
+                // Log only first 5 mismatches to avoid console spam
+                if (window.lsdMismatchCount === undefined) window.lsdMismatchCount = 0;
+                if (window.lsdMismatchCount < 5) {
+                    console.warn("LSD 01 Mismatch:", line);
+                    window.lsdMismatchCount++;
+                }
+            }
+
+            if (match) {
+                let cleanCalle = match[3].trim();
+                // User fix: "number. street" -> remove number and dot
+                if (cleanCalle.includes('.')) {
+                    const parts = cleanCalle.split('.');
+                    if (parts.length > 1) {
+                        // Join back in case there are multiple dots (e.g., "Av.")
+                        cleanCalle = parts.slice(1).join('.').trim();
+                    }
+                }
+
+                return {
+                    registro: '01',
+                    tipo: 'EMPLEADOR',
+                    cuit: match[1],
+                    razon_social: match[2].trim(),
+                    ubicacion: {
+                        calle: cleanCalle,
+                        numero: parseInt(match[4], 10),
+                        localidad: match[5].trim(),
+                        cp: match[6],
+                        direccion_completa: `${cleanCalle} ${match[4]}, ${match[5].trim()}, Entre Rios`
+                    },
+                    // Adding flat properties for VirtualTable compatibility
+                    display: match[2].trim(),
+                    calle: cleanCalle,
+                    localidad: match[5].trim(),
+                    numero: parseInt(match[4], 10),
+                    cp: match[6]
+                };
+            }
+            return { registro: '01', error: 'Formato no reconocido', raw: line };
+        }
+
+        // --- TIPO 02: DATOS DEL EMPLEADO ---
+        case '02': {
+            // Intentamos capturar Nombre y CUIL
+            // Patrón: 02 + basura + Nombre + Espacios + Periodo + CUIL
+            // Ejemplo: ...VERA, MICAELA... 202511... 20385422142
+            const regex02 = /^02\d+?([A-ZÑ\s\.,]+?)\s+20\d{6}/;
+            const match = line.match(regex02);
+
+            return {
+                registro: '02',
+                tipo: 'EMPLEADO',
+                nombre: match ? match[1].trim() : "Desconocido",
+                // raw: line // Descomentar si necesitas toda la linea
+            };
+        }
+
+        // --- TIPO 03: CONCEPTOS (Sueldos) ---
+        case '03': {
+            // Ejemplo: 03... SUELDO MENSUAL ... 110000
+            const regex03 = /^03\d+\s+([A-Z0-9\.\/\-\s]+?)\s+\d/;
+            const match = line.match(regex03);
+
+            return {
+                registro: '03',
+                tipo: 'CONCEPTO',
+                descripcion: match ? match[1].trim() : "Concepto Varios"
+            };
+        }
+
+        // --- TIPO 05: FAMILIARES/ADICIONALES ---
+        case '05': {
+            const regex05 = /^05\d+?([A-ZÑ\s\.,]+?)\s+20\d{6}/;
+            const match = line.match(regex05);
+            return {
+                registro: '05',
+                tipo: 'FAMILIAR',
+                nombre: match ? match[1].trim() : "Familiar"
+            };
+        }
+
+        default:
+            return null; // Ignoramos líneas desconocidas o vacías
+    }
+};
+
+export const parseLsdDefinitivosFile = (content) => {
+    const lines = content.split('\n');
+    const parsedData = [];
+
+    // Estructura Jerárquica:
+    // Mantenemos una referencia al "Empleador Actual" para agrupar a sus empleados si quisieras
+    // Pero por ahora devolvemos la lista plana como pediste.
+
+    lines.forEach(line => {
+        const parsed = parseLSDLine(line);
+        if (parsed) {
+            parsedData.push(parsed);
+        }
+    });
+
+    return parsedData;
+};
