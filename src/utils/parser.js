@@ -187,67 +187,65 @@ export const parseLSDLine = (line) => {
 
     switch (type) {
         // --- TIPO 01: CABECERA EMPLEADOR (Datos de la Empresa) ---
-        case '01': {
-            // Regex explicada:
-            // ^01\d*?           -> Empieza con 01 seguido de números basura (non-greedy)
-            // (\d{11})          -> CAPTURA 1: CUIT (Los últimos 11 dígitos antes del nombre)
-            // ([A-ZÑ\s\.,&]+?)  -> CAPTURA 2: Razón Social (Letras, espacios, puntos, comas)
-            // \s+               -> Espacios obligatorios
-            // 20\d{4}M          -> Ancla: Fecha del periodo (ej: 202511M)
-            // .*?               -> Basura intermedia (IDs de sistema)
-            // ([A-Z0-9\s\.]+?)  -> CAPTURA 3: Calle (ej: CETTOUR o DR. CETTOUR)
-            // \s+               -> Espacios antes del número
-            // (\d{1,6})         -> CAPTURA 4: Número/Altura (ej: 2006)
-            // \s+               -> Espacios
-            // ([A-Z\s]+?)       -> CAPTURA 5: Localidad (ej: SAN JOSE)
-            // \s+               -> Espacios
-            // (\d{4})           -> CAPTURA 6: Código Postal (ej: 3283)
+       case '01': {
+            // CORRECCIÓN:
+            // Cambiamos '.*?' por '\d+' justo después de la fecha.
+            // Esto obliga a consumir el ID numérico (ej: 00001829900) antes de capturar la calle.
+            
+            // Estructura de la Regex:
+            // 1. ^01\d*?           -> Inicio linea
+            // 2. (\d{11})          -> CUIT
+            // 3. ([A-ZÑ\s\.,&]+?)  -> RAZON SOCIAL
+            // 4. \s+               -> Espacios
+            // 5. 20\d{4}M          -> FECHA (ej: 202511M)
+            // 6. \d+               -> !!! EL FIX: Consumimos el ID largo aquí (ej: 00001829900)
+            // 7. ([A-ZÑ0-9\s\.]+?) -> CALLE (Ahora sí captura limpia: AV RAMIREZ)
+            // 8. ...resto...
 
-            const regex01 = /^01\d*?(\d{11})([A-ZÑ\s\.,&]+?)\s+20\d{4}M.*?([A-Z0-9\s\.]+?)\s+(\d{1,6})\s+([A-Z\s]+?)\s+(\d{4})/;
+            const regex01 = /^01\d*?(\d{11})([A-ZÑ\s\.,&]+?)\s+20\d{4}M\d+([A-ZÑ0-9\s\.]+?)\s+(\d{1,6})\s+([A-ZÑ\s]+?)\s+(\d{4})/;
 
             const match = line.match(regex01);
 
             if (!match) {
-                // Log only first 5 mismatches to avoid console spam
+                // Logueamos solo los primeros 5 errores para no ensuciar la consola
                 if (window.lsdMismatchCount === undefined) window.lsdMismatchCount = 0;
                 if (window.lsdMismatchCount < 5) {
                     console.warn("LSD 01 Mismatch:", line);
                     window.lsdMismatchCount++;
                 }
+                return { registro: '01', error: 'Formato no reconocido', raw: line };
             }
 
-            if (match) {
-                let cleanCalle = match[3].trim();
-                // User fix: "number. street" -> remove number and dot
-                if (cleanCalle.includes('.')) {
-                    const parts = cleanCalle.split('.');
-                    if (parts.length > 1) {
-                        // Join back in case there are multiple dots (e.g., "Av.")
-                        cleanCalle = parts.slice(1).join('.').trim();
-                    }
+            let cleanCalle = match[3].trim();
+            
+            // Fix de usuario: "number. street" -> eliminar numero y punto inicial
+            if (cleanCalle.includes('.')) {
+                const parts = cleanCalle.split('.');
+                // Solo aplicamos si parece que el punto separa algo al inicio (ej: "4. AV RAMIREZ")
+                if (parts.length > 1) {
+                   cleanCalle = parts.slice(1).join('.').trim();
                 }
-
-                return {
-                    registro: '01',
-                    tipo: 'EMPLEADOR',
-                    cuit: match[1],
-                    razon_social: match[2].trim(),
-                    ubicacion: {
-                        calle: cleanCalle,
-                        numero: parseInt(match[4], 10),
-                        localidad: match[5].trim(),
-                        cp: match[6],
-                        direccion_completa: `${cleanCalle} ${match[4]}, ${match[5].trim()}, Entre Rios`
-                    },
-                    // Adding flat properties for VirtualTable compatibility
-                    display: match[2].trim(),
-                    calle: cleanCalle,
-                    localidad: match[5].trim(),
-                    numero: parseInt(match[4], 10),
-                    cp: match[6]
-                };
             }
-            return { registro: '01', error: 'Formato no reconocido', raw: line };
+
+            return {
+                registro: '01',
+                tipo: 'EMPLEADOR',
+                cuit: match[1],
+                razon_social: match[2].trim(),
+                ubicacion: {
+                    calle: cleanCalle,
+                    numero: parseInt(match[4], 10),
+                    localidad: match[5].trim(),
+                    cp: match[6],
+                    direccion_completa: `${cleanCalle} ${match[4]}, ${match[5].trim()}, Entre Rios`
+                },
+                // Propiedades planas para la tabla
+                display: match[2].trim(),
+                calle: cleanCalle,
+                localidad: match[5].trim(),
+                numero: parseInt(match[4], 10),
+                cp: match[6]
+            };
         }
 
         // --- TIPO 02: DATOS DEL EMPLEADO ---
